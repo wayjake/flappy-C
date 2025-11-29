@@ -63,6 +63,42 @@ Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #define FLAP_SOUND_MS   40
 
 /* ============================================================================
+ *   MELODY DEFINITIONS
+ * ============================================================================
+ *   Note frequencies (Hz) for musical notes
+ */
+#define NOTE_C4  262
+#define NOTE_D4  294
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_G4  392
+#define NOTE_A4  440
+#define NOTE_B4  494
+#define NOTE_C5  523
+#define NOTE_D5  587
+#define NOTE_E5  659
+#define NOTE_G5  784
+#define NOTE_REST 0
+
+// Startup melody: cheerful ascending jingle
+const int startupMelody[] PROGMEM = {
+    NOTE_C5, NOTE_E5, NOTE_G5, NOTE_C5, NOTE_E5, NOTE_G5
+};
+const int startupDurations[] PROGMEM = {
+    100, 100, 100, 100, 100, 200
+};
+#define STARTUP_MELODY_LEN 6
+
+// Game over melody: descending sad tune
+const int gameOverMelody[] PROGMEM = {
+    NOTE_E5, NOTE_D5, NOTE_C5, NOTE_G4, NOTE_REST, NOTE_C4
+};
+const int gameOverDurations[] PROGMEM = {
+    150, 150, 150, 200, 50, 300
+};
+#define GAMEOVER_MELODY_LEN 6
+
+/* ============================================================================
  *   GAME STATE
  * ============================================================================ */
 
@@ -106,6 +142,26 @@ void drawXbm(int16_t x, int16_t y, int16_t width, int16_t height,
 }
 
 /* ============================================================================
+ *   MELODY PLAYER
+ * ============================================================================
+ *   Plays a melody from PROGMEM arrays. Blocking call.
+ */
+void playMelody(const int *notes, const int *durations, int length) {
+    for (int i = 0; i < length; i++) {
+        int note = pgm_read_word(&notes[i]);
+        int duration = pgm_read_word(&durations[i]);
+
+        if (note == NOTE_REST) {
+            noTone(BUZZER_PIN);
+        } else {
+            tone(BUZZER_PIN, note, duration);
+        }
+        delay(duration + 30);  // Gap between notes
+    }
+    noTone(BUZZER_PIN);
+}
+
+/* ============================================================================
  *   SETUP
  * ============================================================================ */
 void setup() {
@@ -118,6 +174,9 @@ void setup() {
     display.setTextColor(SH110X_WHITE);
 
     initializePipes();
+
+    // Play startup jingle
+    playMelody(startupMelody, startupDurations, STARTUP_MELODY_LEN);
 }
 
 /* ============================================================================
@@ -250,9 +309,8 @@ void checkCollisions() {
  *   GAME OVER
  * ============================================================================ */
 void triggerGameOver() {
-    tone(BUZZER_PIN, FLAP_TONE_FREQ, TONE_DURATION);
-    delay(100);
-    noTone(BUZZER_PIN);
+    // Play game over melody
+    playMelody(gameOverMelody, gameOverDurations, GAMEOVER_MELODY_LEN);
 
     gameState = STATE_TITLE;
     birdY = BIRD_START_Y;
